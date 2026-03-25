@@ -1,165 +1,61 @@
-# solana-zero-to-hero
+# ⚓ Solana Vault - Solana PDA 金库
 
-Next.js starter with Tailwind CSS, `@solana/kit`, and an Anchor vault program example.
+这是一个基于 **Anchor Framework** 开发的 Solana 智能合约（Program）。它演示了如何利用 **PDA (Program Derived Address)** 为每个用户创建私有的、去中心化的资金金库。
 
-## Getting Started
+---
 
-```shell
-npx -y create-solana-dapp@latest -t solana-foundation/templates/kit/solana-zero-to-hero
-```
+## 🛠️ 开发环境版本 (Environment)
 
-```shell
-npm install
-npm run setup   # Builds the Anchor program and generates the TypeScript client
-npm run dev
-```
+为确保合约编译与部署成功，建议使用以下或更高版本的工具链：
 
-Open [http://localhost:3000](http://localhost:3000), connect your wallet, and interact with the vault.
+- **Rust**: `1.91.1 (ed61e7d7e 2025-11-07)`
+- **Solana CLI**: `3.0.10`
+- **Anchor CLI**: `0.32.1`
+- **Node.js**: `v24.10.0`
+- **Yarn**: `1.22.1`
+- **Surfpool CLI**: `0.12.0`
 
-## What's Included
+---
 
-- **Wallet connection** via wallet-standard with auto-discovery and dropdown UI
-- **Cluster switching** — devnet, testnet, mainnet, and localnet from the header
-- **Wallet balance** display with airdrop button (devnet/testnet/localnet)
-- **SOL Vault program** — deposit and withdraw SOL from a personal PDA vault
-- **Toast notifications** with explorer links for every transaction
-- **Error handling** — human-readable messages for common Solana and program errors
-- **Codama-generated client** — type-safe program interactions using `@solana/kit`
-- **Tailwind CSS v4** with light/dark mode toggle
+## 📖 项目简介
 
-## Stack
+`Solana Vault` 允许用户将 SOL 存入一个由程序控制的账户（Vault）中，并确保只有存入者本人（Signer）能够提取这些资金。该项目是学习 Solana PDA 签名、CPI（跨程序调用）以及 Anchor 基本约束的核心案例。
 
-| Layer          | Technology                       |
-| -------------- | -------------------------------- |
-| Frontend       | Next.js 16, React 19, TypeScript |
-| Styling        | Tailwind CSS v4                  |
-| Solana Client  | `@solana/kit`, wallet-standard   |
-| Program Client | Codama-generated, `@solana/kit`  |
-| Program        | Anchor (Rust)                    |
+## ✨ 核心特性
 
-## Project Structure
+- **PDA 账户映射**：通过种子 `[b"vault", signer_key]` 为每个用户派生唯一的金库地址。
+- **租金安全检查**：存入金额必须大于最低租金豁免额（Rent Exempt），确保账户状态在链上持续存在。
+- **自动化权限校验**：利用 Anchor 的 `#[derive(Accounts)]` 宏自动验证调用者身份与金库地址的匹配性。
+- **安全取款**：通过 PDA 种子在合约内部进行签名（`CpiContext::new_with_signer`），实现资金安全原路返回。
 
-```
-├── app/
-│   ├── components/
-│   │   ├── cluster-context.tsx  # Cluster state (React context + localStorage)
-│   │   ├── cluster-select.tsx   # Cluster switcher dropdown
-│   │   ├── grid-background.tsx  # Solana-branded decorative grid
-│   │   ├── providers.tsx        # Wallet + theme providers
-│   │   ├── theme-toggle.tsx     # Light/dark mode toggle
-│   │   ├── vault-card.tsx       # Vault deposit/withdraw UI
-│   │   └── wallet-button.tsx    # Wallet connect/disconnect dropdown
-│   ├── generated/vault/        # Codama-generated program client
-│   ├── lib/
-│   │   ├── wallet/             # Wallet-standard connection layer
-│   │   │   ├── types.ts        # Wallet types
-│   │   │   ├── standard.ts     # Wallet discovery + session creation
-│   │   │   ├── signer.ts       # WalletSession → TransactionSigner
-│   │   │   └── context.tsx     # WalletProvider + useWallet() hook
-│   │   ├── hooks/
-│   │   │   ├── use-balance.ts  # SWR-based balance fetching
-│   │   │   └── use-send-transaction.ts  # Transaction send with loading state
-│   │   ├── cluster.ts          # Cluster endpoints + RPC factory
-│   │   ├── lamports.ts         # SOL/lamports conversion
-│   │   ├── send-transaction.ts # Transaction build + sign + send pipeline
-│   │   ├── errors.ts           # Transaction error parsing
-│   │   └── explorer.ts         # Explorer URL builder + address helpers
-│   └── page.tsx                # Main page
-├── anchor/                     # Anchor workspace
-│   └── programs/vault/         # Vault program (Rust)
-└── codama.json                 # Codama client generation config
-```
+---
 
-## Local Development
+## 🏗️ 技术架构
 
-To test against a local validator instead of devnet:
+### 1. 程序信息
+- **Program ID**: `DHaP8mcPgrjJEgU8ZREF7ajE74XzsZrpTKXQuyJmRBsT`
+- **开发语言**: Rust (Anchor Framework)
+- **部署网络**: Solana Devnet
 
-1. **Start a local validator**
+### 2. 指令说明 (Instructions)
 
-   ```bash
-   solana-test-validator
-   ```
+| 函数名 | 操作 | 核心逻辑 |
+| :--- | :--- | :--- |
+| `deposit` | 存款 | 检查金库是否为空 -> 验证金额是否覆盖租金 -> 执行 System Program 转账 |
+| `withdraw` | 取款 | 校验金库余额 -> 生成 PDA 签名种子 -> 将所有 Lamports 转回签名者账户 |
 
-2. **Deploy the program locally**
+### 3. 数据校验模型 (Account Context)
 
-   ```bash
-   solana config set --url localhost
-   cd anchor
-   anchor build
-   anchor deploy
-   cd ..
-   npm run codama:js   # Regenerate client with local program ID
-   ```
-
-3. **Switch to localnet** in the app using the cluster selector in the header.
-
-## Deploy Your Own Vault
-
-The included vault program is already deployed to devnet. To deploy your own:
-
-### Prerequisites
-
-- [Rust](https://rustup.rs/)
-- [Solana CLI](https://solana.com/docs/intro/installation)
-- [Anchor](https://www.anchor-lang.com/docs/installation)
-
-### Steps
-
-1. **Configure Solana CLI for devnet**
-
-   ```bash
-   solana config set --url devnet
-   ```
-
-2. **Create a wallet (if needed) and fund it**
-
-   ```bash
-   solana-keygen new
-   solana airdrop 2
-   ```
-
-3. **Build and deploy the program**
-
-   ```bash
-   cd anchor
-   anchor build
-   anchor keys sync    # Updates program ID in source
-   anchor build        # Rebuild with new ID
-   anchor deploy
-   cd ..
-   ```
-
-4. **Regenerate the client and restart**
-   ```bash
-   npm run setup   # Rebuilds program and regenerates client
-   npm run dev
-   ```
-
-## Testing
-
-Tests use [LiteSVM](https://github.com/LiteSVM/litesvm), a fast lightweight Solana VM for testing.
-
-```bash
-npm run anchor-build   # Build the program first
-npm run anchor-test    # Run tests
-```
-
-The tests are in `anchor/programs/vault/src/tests.rs` and automatically use the program ID from `declare_id!`.
-
-## Regenerating the Client
-
-If you modify the program, regenerate the TypeScript client:
-
-```bash
-npm run setup   # Or: npm run anchor-build && npm run codama:js
-```
-
-This uses [Codama](https://github.com/codama-idl/codama) to generate a type-safe client from the Anchor IDL.
-
-## Learn More
-
-- [Solana Docs](https://solana.com/docs) — core concepts and guides
-- [Anchor Docs](https://www.anchor-lang.com/docs/introduction) — program development framework
-- [Deploying Programs](https://solana.com/docs/programs/deploying) — deployment guide
-- [@solana/kit](https://github.com/anza-xyz/kit) — Solana JavaScript SDK
-- [Codama](https://github.com/codama-idl/codama) — client generation from IDL
+```rust
+#[derive(Accounts)]
+pub struct VaultAction<'info> {
+    #[account(mut)]
+    pub signer: Signer<'info>, // 支付 Gas 费并拥有金库的钱包
+    #[account(
+        mut,
+        seeds = [b"vault", signer.key().as_ref()], // 定义 PDA 派生路径
+        bump, // 自动处理并存储偏移量 bump
+    )]
+    pub vault: SystemAccount<'info>,
+    pub system_program: Program<'info, System>,
+}
